@@ -1,0 +1,84 @@
+service: leaderboard-api
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-dotenv-plugin
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: eu-west-1
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 30
+  
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    AWS_REGION: ${self:provider.region}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+    FRONTEND_URL: ${env:FRONTEND_URL, '*'}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/leaderboard-scores
+            - arn:aws:dynamodb:${self:provider.region}:*:table/leaderboard-scores/index/*
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminGetUser
+            - cognito-idp:AdminListGroupsForUser
+          Resource:
+            - arn:aws:cognito-idp:${self:provider.region}:*:userpool/*
+
+functions:
+  api:
+    handler: src/app.handler
+    events:
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+            allowCredentials: false
+
+custom:
+  dotenv:
+    path: .env
+  serverless-offline:
+    httpPort: 3001
+    host: localhost
+
+useDotenv: true
