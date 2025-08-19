@@ -46,30 +46,7 @@ export class DynamoService {
 
       await docClient.send(putCommand);
 
-      // After successful submission, trigger WebSocket notifications
-      try {
-        // Import WebSocketService here to avoid circular dependency
-        const { WebSocketService } = await import('./websocketService');
-        
-        // Check if this is a high score (> 1000) and notify
-        if (score > 1000) {
-          await WebSocketService.notifyHighScore(username, score);
-        }
-        
-        // Always notify about new player joining the leaderboard
-        await WebSocketService.notifyNewPlayer(username);
-        
-        // Get updated leaderboard and broadcast it
-        const topScoresResult = await this.getTopScores(10);
-        if (topScoresResult.success && topScoresResult.scores) {
-          await WebSocketService.broadcastLeaderboardUpdate(topScoresResult.scores);
-        }
-        
-        console.log(`📊 Score submitted by ${username}: ${score} - WebSocket notifications sent`);
-      } catch (wsError) {
-        console.error('WebSocket notification error:', wsError);
-        // Don't fail the score submission if WebSocket fails
-      }
+      
 
       return { 
         success: true, 

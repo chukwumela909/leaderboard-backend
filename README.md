@@ -38,42 +38,7 @@ npm run dev
 # Health check: http://localhost:3001/health
 ```
 
-### 4. Testing the Application
-
-#### Run All Tests
-```bash
-# Run complete test suite
-npm test
-
-# Run tests in watch mode (for development)
-npm run test:watch
-
-# Run tests with coverage report
-npm run test:coverage
-
-# Run only unit tests
-npm run test:unit
-
-# Run only integration tests
-npm run test:integration
-
-# Verbose test output
-npm run test:verbose
-```
-
-#### Test Categories
-- **Unit Tests**: Individual service and route testing
-- **Integration Tests**: API + WebSocket functionality
-- **Basic Tests**: Environment and configuration validation
-
-#### Test Environment
-Tests run with mock AWS services and predefined test data:
-- Mock DynamoDB operations
-- Mock Cognito authentication
-- Mock WebSocket server
-- Test JWT tokens and validation
-
-### 5. Build and Deploy
+### 4. Build and Deploy
 ```bash
 # Build TypeScript
 npm run build
@@ -128,19 +93,7 @@ class DynamoService {
   static async getUserScore()   // Get personal best
   static async getTopScores()   // Flexible top N fetch
 }
-```
 
-#### 3. WebSocket Service (`websocketService.ts`)
-**Purpose**: Real-time notifications and broadcasts
-**Pattern**: Static methods with Socket.IO integration
-```typescript
-class WebSocketService {
-  static initialize()                   // Setup Socket.IO server
-  static notifyHighScore()             // Score > 1000 notifications
-  static broadcastLeaderboardUpdate()  // Live leaderboard updates
-  static notifyNewPlayer()             // Welcome messages
-}
-```
 
 ### Route Layer Structure
 
@@ -210,7 +163,6 @@ interface LeaderboardEntry extends ScoreEntry {
 **Rationale**:
 - Familiar and well-documented
 - Excellent middleware ecosystem
-- Easy testing with SuperTest
 - AWS Lambda compatibility via serverless-http
 
 ### 4. **Single-Table DynamoDB Design**
@@ -229,23 +181,9 @@ interface LeaderboardEntry extends ScoreEntry {
 - Offline token verification capability
 - Scalable user management
 
-### 6. **WebSocket Integration with Express**
-**Choice**: Socket.IO running alongside Express server
-**Rationale**:
-- Real-time notifications for high scores
-- Shared server instance efficiency
-- Easy integration with existing authentication
-- Graceful fallback to HTTP polling
 
-### 7. **Comprehensive Testing Strategy**
-**Choice**: Jest with multiple test layers
-**Rationale**:
-- Unit tests for individual services
-- Integration tests for API workflows
-- Mock AWS services for isolated testing
-- TypeScript-first testing approach
 
-### 8. **Serverless-First Design**
+### 7. **Serverless-First Design**
 **Choice**: Built for AWS Lambda deployment
 **Rationale**:
 - Cost-effective scaling
@@ -273,29 +211,11 @@ leaderboard-backend/
 │   │   └── websocketService.ts # Real-time notifications
 │   └── types/               # TypeScript type definitions
 │       └── index.ts         # Shared interfaces and types
-├── tests/                   # Test suite
-│   ├── setup.ts            # Global test configuration
-│   ├── utils.ts            # Test utilities and helpers
-│   ├── basic.test.ts       # Environment validation tests
-│   ├── services/           # Service layer tests
-│   │   ├── authService.test.ts
-│   │   ├── dynamoService.test.ts
-│   │   └── websocketService.test.ts
-│   ├── routes/             # Route handler tests
-│   │   ├── auth.test.ts
-│   │   ├── scores.test.ts
-│   │   └── leaderboard.test.ts
-│   └── integration/        # End-to-end tests
-│       ├── websocket.test.ts
-│       └── api-websocket.test.ts
 ├── serverless.yml          # Serverless Framework configuration
-├── jest.config.js          # Jest testing configuration
 ├── tsconfig.json          # TypeScript compiler configuration
 ├── package.json           # Dependencies and npm scripts
 ├── .env.example           # Environment variables template
-├── API_DOCUMENTATION.md   # Detailed API documentation
-├── TEST_DOCUMENTATION.md  # Testing guide and examples
-└── TESTING_STATUS.md      # Current testing status and issues
+└── API_DOCUMENTATION.md   # Detailed API documentation
 ```
 
 ## 📡 API Endpoints
@@ -338,10 +258,7 @@ leaderboard-backend/
    # WebSocket: ws://localhost:3001
    ```
 
-2. **Test WebSocket Connection**:
-   Open `websocket-test.html` in browser for real-time testing
-
-3. **API Testing**:
+2. **API Testing**:
    ```bash
    # Health check
    curl http://localhost:3001/health
@@ -351,18 +268,6 @@ leaderboard-backend/
      -H "Content-Type: application/json" \
      -d '{"email":"test@example.com","password":"Test123!","username":"testuser"}'
    ```
-
-### Testing Workflow
-```bash
-# Run specific test categories
-npm run test:unit           # Services and utilities
-npm run test:integration    # API + WebSocket tests
-npm test tests/basic.test.ts # Environment validation
-
-# Development testing
-npm run test:watch          # Auto-rerun on file changes
-npm run test:verbose        # Detailed output for debugging
-```
 
 ### Build and Deployment
 ```bash
@@ -600,42 +505,9 @@ serverless logs -f api
 - [ ] CloudWatch monitoring enabled
 - [ ] Security groups and IAM roles properly configured
 
-## 🧪 Testing Documentation
-
-### Test Categories
-1. **Basic Tests** (`tests/basic.test.ts`): ✅ Environment validation
-2. **Service Tests** (`tests/services/`): Unit tests for business logic
-3. **Route Tests** (`tests/routes/`): API endpoint testing
-4. **Integration Tests** (`tests/integration/`): End-to-end workflows
-
-### Running Specific Tests
-```bash
-# Environment validation (always run first)
-npm test tests/basic.test.ts
-
-# Individual service testing
-npm test tests/services/authService.test.ts
-npm test tests/services/dynamoService.test.ts
-npm test tests/services/websocketService.test.ts
-
-# Route testing
-npm test tests/routes/
-
-# Full integration testing
-npm test tests/integration/
-```
-
-### Test Coverage Goals
-- **Services**: 90%+ coverage for all business logic
-- **Routes**: 95%+ coverage for all API endpoints  
-- **Integration**: 80%+ coverage for user workflows
-- **Error Handling**: 100% coverage for error scenarios
-
 ## 📚 Additional Documentation
 
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)**: Complete API reference
-- **[TEST_DOCUMENTATION.md](TEST_DOCUMENTATION.md)**: Testing guide and examples
-- **[TESTING_STATUS.md](TESTING_STATUS.md)**: Current test status and issues
 
 ## 🤝 Contributing
 

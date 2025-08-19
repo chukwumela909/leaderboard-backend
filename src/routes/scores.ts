@@ -1,13 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { DynamoService } from '../services/dynamoService';
-import { WebSocketService } from '../services/websocketService';
-import { 
-  ScoreSubmissionRequest, 
-  ScoreSubmissionResponse, 
+import {
+  ScoreSubmissionRequest,
+  ScoreSubmissionResponse,
+  SubmitScoreResponse,
   CanSubmitResponse,
-  User
+  User,
+  TopScoresResponse
 } from '../types';
+import PusherService from '../services/pusherService';
+import pusherService from '../services/pusherService';
 
 const router = Router();
 
@@ -19,15 +22,15 @@ router.post('/submit', authenticateToken, async (req: Request, res: Response): P
 
     // Validate score
     if (typeof score !== 'number' || score < 0) {
-      res.status(400).json({ 
-        error: 'Score must be a non-negative number' 
+      res.status(400).json({
+        error: 'Score must be a non-negative number'
       });
       return;
     }
 
     if (score > 1000000) {
-      res.status(400).json({ 
-        error: 'Score seems unrealistic. Maximum allowed is 1,000,000' 
+      res.status(400).json({
+        error: 'Score seems unrealistic. Maximum allowed is 1,000,000'
       });
       return;
     }
@@ -36,32 +39,52 @@ router.post('/submit', authenticateToken, async (req: Request, res: Response): P
     const result = await DynamoService.submitScore(user.userId, user.username, score);
 
     if (result.success) {
-      // Send WebSocket notification if score > 1000
-      if (score > 1000) {
-        try {
-          await WebSocketService.sendNotification({
-            type: 'HIGH_SCORE',
-            message: `${user.username} achieved a high score of ${score}!`,
-            score,
-            username: user.username,
-            timestamp: new Date().toISOString()
-          });
-        } catch (wsError) {
-          console.error('WebSocket notification failed:', wsError);
-          // Don't fail the request if WebSocket fails
-        }
-      }
-
       res.json({
         message: 'Score submitted successfully!',
-        isFirstScore: result.isFirstScore,
         score,
-        notificationSent: score > 1000
+        isFirstScore: result.isFirstScore,
+        notificationSent: false
       });
+
+      if (score >= 1000) {
+        const pusherService = PusherService.getInstance();
+
+        pusherService.trigger('leaderboard', '1000 posted', {
+          userId: user.userId,
+          username: user.username,
+          score
+        });
+      }
+
+
+
+      const topResult = await DynamoService.getTopScores(90);
+
+      if (topResult.success) {
+        const response: TopScoresResponse = {
+          topScores: topResult.scores?.map(score => ({
+            username: score.username,
+            score: score.score,
+            timestamp: score.timestamp
+          })) || [],
+          count: topResult.scores?.length || 0
+        };
+
+        const pusherService = PusherService.getInstance();
+        pusherService.trigger('leaderboard', 'score-submitted', {
+          response
+        });
+
+
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+
+
     } else {
       // Check if it's because user already submitted
       if (result.alreadySubmitted) {
-        res.status(409).json({ 
+        res.status(409).json({
           error: result.error,
           alreadySubmitted: true,
           message: 'You have already submitted your score. Each player can only submit once.'
@@ -99,7 +122,7 @@ router.get('/can-submit', authenticateToken, async (req: Request, res: Response)
 router.get('/my-score', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = req.user!;
-    
+
     const result = await DynamoService.getUserScore(user.userId);
 
     if (result.success) {

@@ -6,8 +6,23 @@ import serverless from 'serverless-http';
 import { authRoutes } from './routes/auth';
 import { scoreRoutes } from './routes/scores';
 import { leaderboardRoutes } from './routes/leaderboard';
+import PusherService from './services/pusherService';
 
 const app = express();
+
+
+
+// Initialize Pusher Service
+const pusherConfig = {
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.PUSHER_CLUSTER!,
+  useTLS: true
+};
+
+// Initialize the Pusher service (singleton pattern)
+PusherService.getInstance(pusherConfig);
 
 // Middleware
 app.use(helmet());
@@ -28,15 +43,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Socket.IO test endpoint
-app.get('/socket.io/test', (req, res) => {
-  res.json({
-    status: 'Socket.IO is available',
-    timestamp: new Date().toISOString(),
-    path: '/socket.io/',
-    transports: ['websocket', 'polling']
-  });
-});
+
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { DynamoService } from '../services/dynamoService';
-import { WebSocketService } from '../services/websocketService';
 import { 
   LeaderboardResponse,
   TopScoresResponse,
@@ -140,66 +139,31 @@ router.delete('/admin/clear-all', async (req: Request, res: Response): Promise<v
   }
 });
 
-// WebSocket statistics endpoint
-router.get('/ws/stats', async (req: Request, res: Response): Promise<void> => {
+// HTTP-only: Get top scores with default limit via query (?limit=10)
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    const stats = WebSocketService.getStats();
-    res.json({
-      websocket: stats,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error: any) {
-    console.error('WebSocket stats error:', error);
-    res.status(500).json({ error: 'Failed to get WebSocket statistics' });
-  }
-});
+    const limitParam = req.query.limit as string | undefined;
+    const limit = limitParam ? Math.min(Math.max(parseInt(limitParam, 10), 1), 100) : 10;
 
-// Test WebSocket notification endpoint (for development)
-router.post('/ws/test-notification', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { message, type = 'TEST' } = req.body;
-    
-    if (!message) {
-      res.status(400).json({ error: 'Message is required' });
-      return;
-    }
+    const result = await DynamoService.getTopScores(limit);
 
-    await WebSocketService.sendNotification({
-      type: type,
-      message: message,
-      timestamp: new Date().toISOString()
-    });
+    if (result.success) {
+      const response: TopScoresResponse = {
+        topScores: result.scores?.map(score => ({
+          username: score.username,
+          score: score.score,
+          timestamp: score.timestamp
+        })) || [],
+        count: result.scores?.length || 0
+      };
 
-    res.json({ 
-      success: true, 
-      message: 'Test notification sent',
-      connectedClients: WebSocketService.getStats().connectedClients
-    });
-  } catch (error: any) {
-    console.error('Test notification error:', error);
-    res.status(500).json({ error: 'Failed to send test notification' });
-  }
-});
-
-// Force leaderboard update broadcast
-router.post('/ws/broadcast-leaderboard', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await DynamoService.getTopScores(10);
-    
-    if (result.success && result.scores) {
-      await WebSocketService.broadcastLeaderboardUpdate(result.scores);
-      res.json({ 
-        success: true, 
-        message: 'Leaderboard update broadcasted',
-        scoresCount: result.scores.length,
-        connectedClients: WebSocketService.getStats().connectedClients
-      });
+      res.json(response);
     } else {
-      res.status(500).json({ error: 'Failed to get leaderboard data' });
+      res.status(500).json({ error: result.error });
     }
   } catch (error: any) {
-    console.error('Broadcast leaderboard error:', error);
-    res.status(500).json({ error: 'Failed to broadcast leaderboard update' });
+    console.error('Get leaderboard list error:', error);
+    res.status(500).json({ error: 'Failed to get leaderboard list' });
   }
 });
 
